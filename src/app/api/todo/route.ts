@@ -1,26 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@vercel/postgres";
+import { db, todoTable } from "@/lib/drizzle";
+import { sql } from "@vercel/postgres";
 
-export const GET = async (request: NextRequest) => {
-  const client = await db.connect();
-
+export async function GET(request: NextRequest) {
   try {
-    await client.sql`CREATE TABLE IF NOT EXISTS todos(id serial , Task varchar(255))`;
-    return NextResponse.json({
-      message: "This api is GET and and called from browser",
-    });
+    await sql`CREATE TABLE IF NOT EXISTS Todos(id serial, Task varchar(255));`;
+
+    const res = await db.select().from(todoTable);
+    console.log(res);
+    return NextResponse.json({ data: res });
   } catch (err) {
-    return NextResponse.json({ message: "something Wen wrong" });
+    console.log((err as { message: string }).message);
+    return NextResponse.json({ message: "Somthing went wrong" });
   }
-};
+}
 
 export const POST = async (request: NextRequest) => {
-  const client = await db.connect();
   const req = await request.json();
   try {
     if (req.task) {
-      const res =
-        await client.sql`INSERT INTO todos(TASK) VALUES (${req.task})`;
+      const res = db
+        .insert(todoTable)
+        .values({
+          task: req.task,
+        })
+        .returning();
       console.log(res);
       return NextResponse.json({ message: "Data  added successfully" });
     } else {
